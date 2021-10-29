@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <direct.h>
 //#include "AllowWindowsPlatformTypes.h" 
 #include <d3dx9.h>
@@ -47,7 +48,8 @@ struct TueVertex
 {
 	FVector position;
 	FVector normal;
-	unsigned long color;
+	//unsigned long color;
+	unsigned long  color;
 	FVector2D uv;
 };
 
@@ -59,6 +61,31 @@ struct TueTriVertex
 	TueVertex v2;
 	TueVertex v3;
 };
+
+
+struct MyTriVertex
+{
+	int subsetIndex;
+	TueVertex v1;
+	TueVertex v2;
+	TueVertex v3;
+	D3DCOLORVALUE diffuse;
+	D3DCOLORVALUE ambient;
+	D3DCOLORVALUE emissive;
+	D3DCOLORVALUE specular;
+
+	int id;
+};
+
+
+struct Material
+{
+	D3DCOLORVALUE diffuse;
+	D3DCOLORVALUE ambient;
+	D3DCOLORVALUE emissive;
+	D3DCOLORVALUE specular;
+};
+
 
 struct FLinearColor
 {
@@ -74,11 +101,27 @@ struct FLinearColor
 struct TueMeshTri
 {
 	FVector p1;
-	FVector2D uv1;
+	//FVector2D uv1;
 	FVector n1;
-	FLinearColor c1;
-};
+	//FLinearColor c1;
+	FVector c1;
 
+	float CompareValue;
+
+	D3DCOLORVALUE diffuse;
+	D3DCOLORVALUE ambient;
+	D3DCOLORVALUE emissive;
+	D3DCOLORVALUE specular;
+
+	int id;
+
+	bool operator<(const TueMeshTri& Right)const
+	{
+
+		return CompareValue<Right.CompareValue;
+	}
+
+};
 
 void CreateMaterials(FbxScene* pScene, FbxMesh* pMesh, int face_num);
 
@@ -95,7 +138,9 @@ FbxNode* CreatePyramidWithMaterials(FbxScene* pScene, const char* pName, std::ve
 struct  FMeshInfo
 {
 	std::string Name;
-	std::vector<TueMeshTri>PtAry;
+	std::vector<TueMeshTri>VecPtAry;
+	std::set<TueMeshTri>SetPtAry;
+	std::map<TueMeshTri, int> MapPtAry;
 };
 using FMeshInfoMap = std::map<int, FMeshInfo>;
 

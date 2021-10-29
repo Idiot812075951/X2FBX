@@ -74,7 +74,7 @@
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LinkIncremental>false</LinkIncremental>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -109,6 +109,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>D:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1\include;D:\DX\Include;D:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1\samples\Common;D:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1\samples\ExportScene03;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -116,6 +117,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>D:\DX\Lib\x86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <ImportLibrary>D:/Program Files/Autodesk/FBX/FBX SDK/2020.2.1/bin/vs2017-md/Debug/UI_Example_ImportExport.lib</ImportLibrary>
+      <AdditionalDependencies>D:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1\lib\vs2017\x86\$(Configuration)\libfbxsdk-md.lib;D:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1\lib\vs2017\x86\$(Configuration)\libxml2-md.lib;D:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1\lib\vs2017\x86\$(Configuration)\zlib-md.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;d3dx9.lib;d3dcompiler.lib;d3dx9d.lib;D3d9.lib;advapi32.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

@@ -7,7 +7,8 @@
 #include <filesystem>
 #include "ueXReader.h"
 #include <stdio.h>  
-#include <windows.h>  
+#include <windows.h> 
+#include<iostream>;
 
 
 using namespace std;
@@ -57,7 +58,7 @@ vector<string> extractFiles(const string& folder)
 }
 HWND GetConsoleHwnd(void)
 {
-#define MY_BUFSIZE 1024 // Buffer size for console window titles.
+	#define MY_BUFSIZE 1024 // Buffer size for console window titles.
 	HWND hwndFound;         // This is what is returned to the caller.
 	char pszNewWindowTitle[MY_BUFSIZE]; // Contains fabricated
 	// WindowTitle.
@@ -93,53 +94,88 @@ HWND GetConsoleHwnd(void)
 	return(hwndFound);
 }
 
+int input_type = 1;
+
 int main(int argc, char* argv[])
 {
-	string InputFolderPath = argv[1];
-	string OutFolderPath = argv[2];
-	vector<string> Allfiles = extractFiles(InputFolderPath);
-	vector<string> Xfiles;
-
-	int Allfiles_num= Allfiles.size();
-	//筛选出.X文件，添加到vector里面
-	for (int i=0;i< Allfiles_num;i++)
+	//0 是输入文件夹   模式
+	if (input_type==0)
 	{
-		auto idx = Allfiles[i].find(".X");
-		
-		if (idx == string::npos)//不存在。
+		string InputFolderPath = argv[1];
+		string OutFolderPath = argv[2];
+
+		vector<string> Allfiles = extractFiles(InputFolderPath);
+		vector<string> Xfiles;
+
+		int Allfiles_num = Allfiles.size();
+		//筛选出.X文件，添加到vector里面
+		for (int i = 0; i < Allfiles_num; i++)
 		{
-			continue;
+			auto idx = Allfiles[i].find(".X");
+
+			if (idx == string::npos)//不存在。
+			{
+				continue;
+			}
+			else//存在。
+			{
+				//筛选出 .X 文件，记录在 Xfiles里
+				Xfiles.push_back(Allfiles[i]);
+			}
 		}
-		else//存在。
+		//在控制台下显示进度  
+		const int NUM = Xfiles.size();//需要转化的FBX数量  
+		printf("将要转换%d个.X文件 \n", Xfiles.size());
+		for (int i = 0; i < NUM; i++)
 		{
-			Xfiles.push_back(Allfiles[i]);
+			HWND curhund = GetConsoleHwnd();
+			string X = ".X";
+			string FBX = ".FBX";
+			string tmp = Xfiles[i];
+			string s = tmp.replace(tmp.find(InputFolderPath), InputFolderPath.length(), OutFolderPath);
+			s = s.replace(s.find(X), X.length(), FBX);
+
+			printf("正在转换第%d个\r", i + 1);
+			getXInfo(Xfiles[i], curhund, s);
+			putchar('\n');
 		}
+		printf("  恭喜！  转换完成！");
+		return 0;
 	}
-
-	//在控制台下显示进度  
-
-
-	const int NUM=Xfiles.size();//任务完成总量  
-	printf("将要转换%d个.X文件 \n", Xfiles.size());
-	
-
-	for (int i = 0; i < NUM; i++)
+	//1 是输入单个文件  模式
+	if (input_type == 1)
 	{
+		cout << "点击右上角关闭按钮退出\n";
+
+
+		//cout << "请输入.X文件全路径：";
+		string InputXfile = argv[1];
+		string OutFbx = argv[2];
+		//string InputXfile;
+		//getline(cin, InputXfile);
 		HWND curhund = GetConsoleHwnd();
-		string X = ".X";
-		string FBX = ".FBX";
-		string tmp = Xfiles[i];
-		string s = tmp.replace(tmp.find(InputFolderPath), InputFolderPath.length(), OutFolderPath);
-		s = s.replace(s.find(X), X.length(), FBX);
+		string s;
+		string x = ".X";
+		//要一个fbx作为string的复制，因为在replace的时候会改变输入值
+		string fbx = InputXfile;
 
-		printf("正在转换第%d个\r", i+1);
-		getXInfo(Xfiles[i], curhund, s);
-		putchar('\n');
+		//auto idx = InputXfile.find(".X");
+		//if (idx == InputXfile.npos)
+		//{
+		//	cout << "输入.X文件名非法！\n";
+		//}
+
+		s = InputXfile.replace(InputXfile.find(x), x.length(), ".FBX");
+
+		getXInfo(fbx, curhund, OutFbx);
+		cout << "转化完成！\n";
+
+		
+
+		return 0;
 	}
 
-	printf("  恭喜！  转换完成！");
-
-	return 0;
+	
 
 }
 
