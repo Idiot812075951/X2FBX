@@ -9,6 +9,7 @@
 #include <stdio.h>  
 #include <windows.h> 
 #include<iostream>;
+#include <direct.h>
 
 
 using namespace std;
@@ -93,7 +94,7 @@ HWND GetConsoleHwnd(void)
 
 	return(hwndFound);
 }
-
+//0 是文件夹输入，1是按名字输入，2是创造立方体
 int input_type = 1;
 
 int main(int argc, char* argv[])
@@ -149,25 +150,31 @@ int main(int argc, char* argv[])
 
 
 		//cout << "请输入.X文件全路径：";
+		string ProcessPath = argv[0];
+		string RootPath = filesystem::path(ProcessPath).root_path().string();
+		string TmpFolder = RootPath + "FbxTmp";
+		string cmd = "mkdir " + TmpFolder;
+		//system("mkdir D:\\FbxTmp");
+		system(cmd.c_str());
+
+
 		string InputXfile = argv[1];
 		string OutFbx = argv[2];
-		//string InputXfile;
-		//getline(cin, InputXfile);
+		
+		//string OutTmp = "D:\\FbxTmp\\TemporaryReameFBX.fbx";
+		string OutTmp = TmpFolder+"\\TemporaryFile.fbx";
+
 		HWND curhund = GetConsoleHwnd();
 		string s;
 		string x = ".X";
 		//要一个fbx作为string的复制，因为在replace的时候会改变输入值
 		string fbx = InputXfile;
-
-		//auto idx = InputXfile.find(".X");
-		//if (idx == InputXfile.npos)
-		//{
-		//	cout << "输入.X文件名非法！\n";
-		//}
-
 		s = InputXfile.replace(InputXfile.find(x), x.length(), ".FBX");
 
-		getXInfo(fbx, curhund, OutFbx);
+		getXInfo(fbx, curhund, OutTmp);
+
+		filesystem::rename(OutTmp, OutFbx);
+
 		cout << "转化完成！\n";
 
 		
@@ -175,9 +182,34 @@ int main(int argc, char* argv[])
 		return 0;
 	}
 
-	
+	if (input_type == 2)
+	{
+		CreateCube();
+	}
 
 }
+
+
+char* WcharToChar(wchar_t* wc)
+{
+	//Release();
+	int len = WideCharToMultiByte(CP_ACP, 0, wc, wcslen(wc), NULL, 0, NULL, NULL);
+	char* m_char = new char[len + 1];
+	WideCharToMultiByte(CP_ACP, 0, wc, wcslen(wc), m_char, len, NULL, NULL);
+	m_char[len] = '\0';
+	return m_char;
+}
+
+char* WcharToUChar(wchar_t* wc)
+{
+	//Release();
+	int len = WideCharToMultiByte(CP_UTF8, 0, wc, wcslen(wc), NULL, 0, NULL, NULL);
+	char* m_char = new char[len + 1];
+	WideCharToMultiByte(CP_UTF8, 0, wc, wcslen(wc), m_char, len, NULL, NULL);
+	m_char[len] = '\0';
+	return m_char;
+}
+
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
 // 调试程序: F5 或调试 >“开始调试”菜单

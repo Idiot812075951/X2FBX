@@ -48,7 +48,6 @@ struct TueVertex
 {
 	FVector position;
 	FVector normal;
-	//unsigned long color;
 	unsigned long  color;
 	FVector2D uv;
 };
@@ -78,6 +77,19 @@ struct MyTriVertex
 };
 
 
+struct MyVertex
+{
+	int subsetIndex;
+	TueVertex v;
+	D3DCOLORVALUE diffuse;
+	D3DCOLORVALUE ambient;
+	D3DCOLORVALUE emissive;
+	D3DCOLORVALUE specular;
+};
+
+
+
+
 struct Material
 {
 	D3DCOLORVALUE diffuse;
@@ -98,13 +110,25 @@ struct FLinearColor
 	float A;
 
 };
+struct ThreePoints
+{
+	FVector p1;
+	//FVector2D uv1;
+	FVector p2;
+	//FLinearColor c1;
+	FVector p3;
+};
+
 struct TueMeshTri
 {
 	FVector p1;
+	ThreePoints points;
 	//FVector2D uv1;
 	FVector n1;
 	//FLinearColor c1;
 	FVector c1;
+
+
 
 	float CompareValue;
 
@@ -123,6 +147,7 @@ struct TueMeshTri
 
 };
 
+
 void CreateMaterials(FbxScene* pScene, FbxMesh* pMesh, int face_num);
 
 FbxSurfacePhong* CreateMaterial(FbxScene* pScene, FbxDouble3 pColor);
@@ -138,10 +163,14 @@ FbxNode* CreatePyramidWithMaterials(FbxScene* pScene, const char* pName, std::ve
 struct  FMeshInfo
 {
 	std::string Name;
-	std::vector<TueMeshTri>VecPtAry;
+	std::vector<MyVertex>VecPtAry;
+	std::vector<TueMeshTri>UnequeVecPtAry;
+	
 	std::set<TueMeshTri>SetPtAry;
 	std::map<TueMeshTri, int> MapPtAry;
 };
 using FMeshInfoMap = std::map<int, FMeshInfo>;
 
 void CreateTexture(const FMeshInfoMap FMeshInfoMap, FbxScene* pScene, FbxMesh* pMesh);
+
+void CreateCube();

@@ -44,7 +44,7 @@ char* CutPostfix(char* Target)
 }
 
 
-bool getXInfo (const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
+bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 {
 
 	//D3DCOLOR myColor = D3DCOLOR_XRGB(0, 0, 255);//绿色
@@ -71,7 +71,7 @@ bool getXInfo (const std::string& lxoFilename, HWND hwnd, std::string ExportPath
 		return false;
 	}
 
-	g_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_SOFTWARE_VERTEXPROCESSING,&d3dpp, &g_device);
+	g_d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &d3dpp, &g_device);
 	if (FAILED(D3DXLoadMeshFromXA(lxoFilename.data(), D3DXMESH_MANAGED, g_device, NULL, &material_buffer, NULL, &g_num_materials, &g_mesh)))
 	{
 		return false;
@@ -94,572 +94,128 @@ bool getXInfo (const std::string& lxoFilename, HWND hwnd, std::string ExportPath
 	g_mesh->OptimizeInplace(D3DXMESHOPT_VERTEXCACHE, rgdwAdjacency, NULL, NULL, NULL);
 	free(rgdwAdjacency);
 
-	TueVertex* pv, v1, v2, v3, v4;
-	int i0, i00, i1, i2, i3;
-	PWORD pi2 = NULL;
-	PDWORD pi4 = NULL;
-	// pdword就是一个正整数
-	PDWORD pa;
-	std::vector<TueTriVertex> vOrg;
-	std::vector<TueTriVertex> vFinal;
-
-	std::vector<MyTriVertex> vMyOrg;
-	std::vector<MyTriVertex> vMyFinal;
-	int subsetIndex;
-	D3DXVECTOR3 position;
-	D3DXVECTOR3 normal;
-	D3DXVECTOR2 uv;
-	D3DXVECTOR3 pMin;
-	D3DXVECTOR3 pMax;
-	i0 = g_mesh->GetNumFaces();
-	i00 = g_mesh->GetNumVertices();
+	auto NumFaces = g_mesh->GetNumFaces();
+	auto NumVertices = g_mesh->GetNumVertices();
 
 	IDirect3DIndexBuffer9* ppIB;
 	g_mesh->GetIndexBuffer(&ppIB);
+
 	D3DINDEXBUFFER_DESC pDesc;
 	ppIB->GetDesc(&pDesc);
-	int step = pDesc.Size / (i0 * 3);
+	int step = pDesc.Size / (NumFaces * 3);
 
-	
-	g_mesh->LockAttributeBuffer(0, &pa);
+	PDWORD AttributeBuffer = 0;
+	g_mesh->LockAttributeBuffer(0, &AttributeBuffer);
+
+	PWORD IndexBufferSize2 = nullptr;
+	PDWORD IndexBufferSize4 = nullptr;
 	if (step == 2)
-		g_mesh->LockIndexBuffer(0, (void**)&pi2);
+	{
+		g_mesh->LockIndexBuffer(0, (void**)&IndexBufferSize2);
+	}
 	else
-		g_mesh->LockIndexBuffer(0, (void**)&pi4);
+	{
+		g_mesh->LockIndexBuffer(0, (void**)&IndexBufferSize4);
+	}
+	TueVertex* pv = nullptr;
 	g_mesh->LockVertexBuffer(0, (void**)&pv);
 
-	std::vector<long long> IndexAry;
 	std::vector<TueVertex> VerAry;
-	for (int i = 0; i < i0; i++)
+	for (int i = 0; i < NumVertices; i++)
 	{
-		if (step == 2)
-		{
-			IndexAry.emplace_back(*pi2);
-		}
-		else
-		{
-			IndexAry.emplace_back(*pi4);
-		}
-
-		VerAry.push_back(*pv);
-	}
-	for (int i = 0; i < i0; i++)
-	{
-		if (step == 2)
-		{
-			i1 = *pi2;
-			IndexAry.emplace_back(i1);
-			pi2 += 1;
-			i2 = *pi2;
-			IndexAry.emplace_back(i2);
-			pi2 += 1;
-			i3 = *pi2;
-			IndexAry.emplace_back(i3);
-			pi2 += 1;
-		}
-		else
-		{
-			i1 = *pi4;
-			IndexAry.emplace_back(i1);
-			pi4 += 1;
-			i2 = *pi4;
-			IndexAry.emplace_back(i2);
-			pi4 += 1;
-			i3 = *pi4;
-			IndexAry.emplace_back(i3);
-			pi4 += 1;
-		}
-
-
-		// i1就是点的索引，每次用指针定位那个点，再通过 += ，-=来移动指针位置；
-		pv += i1;
-		v1 = *pv; //取到第一个点
-
-		pv -= i1; //先退回去，再重新加
-		pv += i2;
-		v2 = *pv;
-
-		pv -= i2;
-		pv += i3;
-		v3 = *pv;
-
-		pv -= i3;
-		//这是三角面的索引
-		subsetIndex = *pa;
-		pa += 1;
-
-		TueTriVertex v = { subsetIndex, v1, v2, v3 };
-	
-
-		D3DXMATERIAL* tempMaterials = (D3DXMATERIAL*)(material_buffer)->GetBufferPointer();
-		D3DCOLORVALUE diffuse = tempMaterials->MatD3D.Diffuse;
-		D3DCOLORVALUE ambient = tempMaterials->MatD3D.Ambient;
-		D3DCOLORVALUE emissive = tempMaterials->MatD3D.Emissive;
-		D3DCOLORVALUE specular = tempMaterials->MatD3D.Specular;
-
-		MyTriVertex my = { subsetIndex, v1, v2, v3 ,diffuse,ambient,emissive,specular };
-
-		vOrg.push_back(v);
-		vMyOrg.push_back(my);
+		VerAry.emplace_back(*pv);
+		pv++;
 	}
 
+	std::map<int, std::pair<std::string, std::vector<long long>>> SubsetIndexMap;
+	if (step == 2)
+	{
+		for (int i = 0; i < NumFaces; i++)
+		{
+			auto& SebsetIndexRef = SubsetIndexMap[*(AttributeBuffer + i)];
+			for (int j = 0; j < 3; j++)
+			{
+				SebsetIndexRef.second.emplace_back(*(IndexBufferSize2 + (i * 3 + j)));
+			}
+			//材质索引
+		}
+	}
+	else
+	{
+		for (int i = 0; i < NumFaces; i++)
+		{
+			auto& SebsetIndexRef = SubsetIndexMap[*(AttributeBuffer + i)];
+			for (int j = 0; j < 3; j++)
+			{
+				SebsetIndexRef.second.emplace_back(*(IndexBufferSize4 + (i * 3 + j)));
+			}
+			//材质索引
+		}
+	}
 
 	g_mesh->UnlockAttributeBuffer();
 	g_mesh->UnlockIndexBuffer();
 	g_mesh->UnlockVertexBuffer();
 
-	TueTriVertex vv;
-	MyTriVertex mm;
-	int count;
-
-	//D3DXMATERIAL* tempMaterials = (D3DXMATERIAL*)(material_buffer)->GetBufferPointer();
-
-	FMeshInfoMap MeshAry;
-	std::vector<Material> vMaterial;
+	D3DXMATERIAL* MaterialsPtr = (D3DXMATERIAL*)(material_buffer)->GetBufferPointer();
 	for (unsigned int j = 0; j < g_num_materials; j++)
 	{
-		D3DXMATERIAL* tempMaterials = (D3DXMATERIAL*)(material_buffer)->GetBufferPointer();
-		Material m;
-		//tempMaterials += j;
-
-		auto ptr = tempMaterials + j;
-
-		m.diffuse= ptr->MatD3D.Diffuse;
-		m.ambient = ptr->MatD3D.Ambient;
-		m.emissive = ptr->MatD3D.Emissive;
-		m.specular = ptr->MatD3D.Specular;
-		vMaterial.push_back(m);
-
-		
-
-		FMeshInfo MeshInfo;
-
-		if (tempMaterials[j].pTextureFilename)
+		if (MaterialsPtr[j].pTextureFilename)
 		{
-			MeshInfo.Name = tempMaterials[j].pTextureFilename;
+			SubsetIndexMap[j].first = MaterialsPtr[j].pTextureFilename;
 		}
-
-		vFinal.clear();
-		vMyFinal.clear();
-		for (std::vector<MyTriVertex>::iterator iter = vMyOrg.begin(); iter < vMyOrg.end(); ++iter)
-		{
-			mm = *iter;
-			if (mm.subsetIndex == j)
-			{
-				vMyFinal.push_back(mm);
-			}
-		}
-
-		std::vector<float> Vf;
-		std::list<float> Lf;
-		std::set<float> Sf;
-
-		//for (int m = 0; m < vMyFinal.size(); m++)
-		//{
-		//	MyTriVertex setvert = vMyFinal[m];
-		//	float a;
-		//	float b;
-		//	float c;
-		//	a = setvert.v1.position.X + setvert.v1.position.Y + setvert.v1.position.Z;
-		//	b = setvert.v2.position.X + setvert.v2.position.Y + setvert.v2.position.Z;
-		//	c = setvert.v3.position.X + setvert.v3.position.Y + setvert.v3.position.Z;
-
-		//	//sort(Vf.begin(), Vf.end());
-		//	//Vf.erase(unique(Vf.begin(), Vf.end()), Vf.end());
-		//	Sf.insert(a);
-		//	Sf.insert(b);
-		//	Sf.insert(c);
-
-		//}
-
-		printf("");
-
-		//sort(Vf.begin(), Vf.end());
-		//Vf.erase(unique(Vf.begin(), Vf.end()), Vf.end());
-
-
-		for (int m = 0; m < vMyFinal.size(); m++)
-		{
-			int idd = 0;
-			MyTriVertex setvert = vMyFinal[m];
-			{
-				//int num;
-				//
-				//float tmp;
-				//tmp= setvert.v1.position.X + setvert.v1.position.Y + setvert.v1.position.Z;
-				//num = std::count(Sf.begin(), Sf.end(), tmp);//统计出现的次数
-
-				//if (num > 3)
-				//{
-				//	continue;
-				//}
-				//else
-				{
-					TueMeshTri MeshTri;
-					MeshTri.p1.X = setvert.v1.position.X * 10;
-					MeshTri.p1.Y = setvert.v1.position.Y * 10;
-					MeshTri.p1.Z = setvert.v1.position.Z * 10;
-
-					MeshTri.n1.X = setvert.v1.normal.X;
-					MeshTri.n1.Y = setvert.v1.normal.Y;
-					MeshTri.n1.Z = setvert.v1.normal.Z;
-					
-
-					MeshTri.CompareValue = pow(MeshTri.p1.X, 3); +pow(MeshTri.p1.Y, 3);+pow(MeshTri.p1.Z, 3);
-			
-					MeshTri.id = idd;
-
-					MeshInfo.VecPtAry.emplace_back(MeshTri);
-					MeshInfo.SetPtAry.insert(MeshTri);
-
-				
-					MeshInfo.MapPtAry[MeshTri]++;
-					idd += 1;
-
-				}
-
-			}
-			{
-				//int num;
-
-				//float tmp;
-				//tmp = setvert.v2.position.X + setvert.v2.position.Y + setvert.v2.position.Z;
-
-				//num = std::count(Vf.begin(), Vf.end(), tmp);//统计出现的次数
-
-				//if (num> 3)
-				//{
-				//	continue;
-				//}
-				//else 
-				{
-					TueMeshTri MeshTri;
-					MeshTri.p1.X = setvert.v2.position.X * 10;
-					MeshTri.p1.Y = setvert.v2.position.Y * 10;
-					MeshTri.p1.Z = setvert.v2.position.Z * 10;
-
-					MeshTri.n1.X = setvert.v2.normal.X;
-					MeshTri.n1.Y = setvert.v2.normal.Y;
-					MeshTri.n1.Z = setvert.v2.normal.Z;
-
-
-					//MeshTri.CompareValue = MeshTri.p1.X + MeshTri.p1.Y + MeshTri.p1.Z;
-					MeshTri.CompareValue = pow(MeshTri.p1.X, 3); +pow(MeshTri.p1.Y, 3); +pow(MeshTri.p1.Z, 3);
-					MeshTri.id = idd;
-
-					MeshInfo.VecPtAry.emplace_back(MeshTri);
-					MeshInfo.SetPtAry.insert(MeshTri);
-					MeshInfo.MapPtAry[MeshTri]++;
-					idd += 1;
-				}
-
-
-
-				
-			}
-			{
-				//int num;
-
-				//double tmp;
-				//tmp = setvert.v3.position.X + setvert.v3.position.Y + setvert.v3.position.Z;
-
-				//num = std::count(Vf.begin(), Vf.end(), tmp);//统计出现的次数
-
-				//if (num > 3)
-				//{
-				//	continue;
-				//}
-				//else
-				{
-					TueMeshTri MeshTri;
-					MeshTri.p1.X = setvert.v3.position.X * 10;
-					MeshTri.p1.Y = setvert.v3.position.Y * 10;
-					MeshTri.p1.Z = setvert.v3.position.Z * 10;
-
-					MeshTri.n1.X = setvert.v3.normal.X;
-					MeshTri.n1.Y = setvert.v3.normal.Y;
-					MeshTri.n1.Z = setvert.v3.normal.Z;
-
-					//MeshTri.CompareValue = MeshTri.p1.X + MeshTri.p1.Y + MeshTri.p1.Z;
-					MeshTri.CompareValue = pow(MeshTri.p1.X, 3); +pow(MeshTri.p1.Y, 3); +pow(MeshTri.p1.Z, 3);
-					MeshTri.id = idd;
-
-					MeshInfo.VecPtAry.emplace_back(MeshTri);
-					MeshInfo.SetPtAry.insert(MeshTri);
-					MeshInfo.MapPtAry[MeshTri]++;
-					idd += 1;
-				}
-
-				
-
-			}
-		}
-
-
-
-		MeshAry.insert({ j, MeshInfo });
 	}
 
-
-	auto pManager = FbxManager::Create();
-	if (!pManager)
-	{
-		//FBXSDK_printf("Error: Unable to create FBX Manager!\n");
-		exit(1);
-	}
-	else
-	{
-		//FBXSDK_printf("Autodesk FBX SDK version %s\n", pManager->GetVersion());
-	}
-	//Create an IOSettings object.This object holds all import / export settings.
-	FbxIOSettings* ios = FbxIOSettings::Create(pManager, IOSROOT);
-	pManager->SetIOSettings(ios);
-
-	//Load plugins from the executable directory(optional)
-	FbxString lPath = FbxGetApplicationDirectory();
-	pManager->LoadPluginsDirectory(lPath.Buffer());
-
-
-	FbxScene* pScene = FbxScene::Create(pManager, "My Scene");
+	FbxManager* pManager = NULL;
+	FbxScene* pScene = NULL;
+	InitializeSdkObjects(pManager, pScene);
+	char* cc = NULL;
+	bool PResult = CreateScene(pScene, cc);
 	const char* pName = "test";
 	FbxMesh* lMesh = FbxMesh::Create(pScene, pName);
 
-	int PtCount = 0;
-	for (auto Iter : MeshAry)
-	{
-		PtCount += Iter.second.VecPtAry.size();
-	}
-	lMesh->InitControlPoints(PtCount);
+	lMesh->InitControlPoints(VerAry.size());
 	FbxVector4* lControlPoints = lMesh->GetControlPoints();
-	int PtIndex = 0;
 
-	
-
-
-	for (auto Iter : MeshAry)
+	for (int i = 0; i < VerAry.size(); i++)
 	{
-		//注意，他这个是反过来的，索引0是Z，1是Y，2才是X
-		//控制点不对
-
-		//std::vector<TueMeshTri>tmp;
-		//for (auto ii : Iter.second.SetPtAry)
-		//{
-		//	tmp.push_back(ii);
-		//}
-
-		for (int i = 0; i < Iter.second.VecPtAry.size()/2 ; i++)
-		{
-			if (1)
-			{
-				lControlPoints[PtIndex][0] = Iter.second.VecPtAry[i].p1.Z / 10;
-				lControlPoints[PtIndex][1] = Iter.second.VecPtAry[i].p1.Y / 10;
-				lControlPoints[PtIndex][2] = Iter.second.VecPtAry[i].p1.X / 10;
-			}
-			//lControlPoints[PtIndex][0] = Iter.second.VecPtAry[i].p1.Z / 10;
-			//lControlPoints[PtIndex][1] = Iter.second.VecPtAry[i].p1.Y / 10;
-			//lControlPoints[PtIndex][2] = Iter.second.VecPtAry[i].p1.X / 10;
-			/*int tmp = (PtIndex % 6);
-			if (tmp== 0 )
-			{
-				continue;
-			}
-			else
-			{
-				lControlPoints[PtIndex][0] = Iter.second.VecPtAry[i].p1.Z / 10;
-				lControlPoints[PtIndex][1] = Iter.second.VecPtAry[i].p1.Y / 10;
-				lControlPoints[PtIndex][2] = Iter.second.VecPtAry[i].p1.X / 10;
-			}*/
-			
-			PtIndex++;
-		}
-	
+		lControlPoints[i].mData[0] = VerAry[i].position.Z / 10;
+		lControlPoints[i].mData[1] = VerAry[i].position.Y / 10;
+		lControlPoints[i].mData[2] = VerAry[i].position.X / 10;
 	}
 
-	FbxGeometryElementNormal* lNormalElement = lMesh->CreateElementNormal();
-	lNormalElement->SetMappingMode(FbxGeometryElement::eByControlPoint);
-	lNormalElement->SetReferenceMode(FbxGeometryElement::eDirect);
+	FbxGeometryElementNormal* lGeometryElementNormal = lMesh->CreateElementNormal();
+	lGeometryElementNormal->SetMappingMode(FbxGeometryElement::eByControlPoint);
+	lGeometryElementNormal->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
+	lGeometryElementNormal->GetDirectArray().Add(FbxVector4(
+		1,
+		0,
+		0
+	));
 
-	//注意了，下面这个是要的
-
-	//for (auto Iter : MeshAry)
-	//{
-
-	//	std::vector<TueMeshTri>tmp;
-	//	for (auto ii : Iter.second.SetPtAry)
-	//	{
-	//		tmp.push_back(ii);
-	//	}
-
-	//	for (int i = 0; i < Iter.second.VecPtAry.size(); i++)
-	//	//for (int i = 0; i < Iter.second.SetPtAry.size(); i++)
-	//	{
-	//		FbxVector4 lNormalZPos(
-	//			//tmp[i].n1.X,
-	//			//tmp[i].n1.Y,
-	//			//tmp[i].n1.Z
-	//			Iter.second.VecPtAry[i].n1.X,
-	//			Iter.second.VecPtAry[i].n1.Y,
-	//			Iter.second.VecPtAry[i].n1.Z
-
-	//		);
-	//		lNormalElement->GetDirectArray().Add(lNormalZPos);
-	//	}
-
-
-	//}
-
-	//注意了，上面这个是要的
-
-
-	//FbxGeometryElementUV* lUVDiffuseElement = lMesh->CreateElementUV(gDiffuseElementName);
-	//FBX_ASSERT(lUVDiffuseElement != NULL);
-	//lUVDiffuseElement->SetMappingMode(FbxGeometryElement::eByPolygonVertex);
-	//lUVDiffuseElement->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
-	//PtIndex = 0;
-	//for (auto Iter : MeshAry)
-	//{
-	//	for (int i = 0; i < Iter.second.PtAry.size(); i++)
-	//	{
-	//		FbxVector2 lUVDiffuse(
-	//			Iter.second.PtAry[i].uv1.X,
-	//			Iter.second.PtAry[i].uv1.Y
-	//		);
-	//		//lUVDiffuseElement->GetDirectArray().Add(lUVDiffuse);
-	//		PtIndex++;
-	//	}
-	//}
-
-
-	
-
-	//lUVDiffuseElement->GetIndexArray().SetCount(PtIndex);
-
-	FbxGeometryElementMaterial* lMaterialElement = lMesh->CreateElementMaterial();
-	lMaterialElement->SetMappingMode(FbxGeometryElement::eByPolygon);
-	lMaterialElement->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
-
-	PtIndex = 0;
-	int ignore=0;
-
-	std::vector<TueMeshTri> UniquePtAry;
-
-
-	for (auto Iter : MeshAry)
+	// 以前的normal位置
+	for (auto Iter : SubsetIndexMap)
 	{
-		//UniquePtAry = Iter.second.PtAry;
-		//std::sort(UniquePtAry.begin(), UniquePtAry.end(), [](const TueMeshTri&Left, const TueMeshTri&Right) {
-		//	return true;
-		//});
-//		UniquePtAry.erase(unique(UniquePtAry.begin(), UniquePtAry.end(), UniquePtAry.end()));
-		for (int i = 0; i < Iter.second.VecPtAry.size() / 3; i++)
+		for (int i = 0; i < Iter.second.second.size() / 3; i++)
 		{
-	
 			lMesh->BeginPolygon(Iter.first);
-			//lMesh->BeginPolygon(-1,-1,false);
-			//lMesh->BeginPolygon(-1, -1, false);
 			for (int j = 0; j < 3; j++)
 			{
-
-				lMesh->AddPolygon(PtIndex);
-
-				////lUVDiffuseElement->GetIndexArray().SetAt(PtIndex, PtIndex);
-				PtIndex++;
+				lGeometryElementNormal->GetIndexArray().Add(0);
+				lMesh->AddPolygon(Iter.second.second[i * 3 + j]);
+				//				lUVAmbientElement->GetIndexArray().SetAt(i * 3 + j, i * 3 + j);
 			}
 			lMesh->EndPolygon();
 		}
 	}
 
-
-
-
-
-	//FbxFileTexture* lTexture = FbxFileTexture::Create(pScene, "Diffuse Texture");
-	//bool isTexture = lTexture->SetFileName("0.jpg");
-
-	//for (auto Iter : MeshAry)
-	//{
-	//	FbxNode* TextureNode = FbxNode::Create(pScene, Iter.second.Name.data());
-	//}
-
 	FbxNode* lNode = FbxNode::Create(pScene, pName);
 	lNode->SetNodeAttribute(lMesh);
-
-
-	int c = 0;
-	for (auto i:vMaterial)
-	{
-		FbxString lMaterialName = "material";
-		FbxDouble3 dif(i.diffuse.r, i.diffuse.g, i.diffuse.b);
-		FbxDouble3 amb(i.ambient.r, i.ambient.g, i.ambient.b);
-		FbxDouble3 emi(i.emissive.r, i.emissive.g, i.emissive.b);
-		FbxDouble3 spe(i.specular.r, i.specular.g, i.specular.b);
-		lMaterialName += c;
-		c += 1;
-
-		FbxDouble3 red(1.0, 0.0, 0.0);
-
-		auto lMaterial = FbxSurfacePhong::Create(pScene, lMaterialName.Buffer());
-
-		/*lMaterial->Diffuse.Set(dif);*/
-		lMaterial->Diffuse.Set(dif);
-		lMaterial->Ambient.Set(amb);
-		lMaterial->Emissive.Set(emi);
-		lMaterial->Specular.Set(spe);
-
-		FbxNode* lNode = lMesh->GetNode();
-		if (lNode)
-			lNode->AddMaterial(lMaterial);
-	}
-
-	//for (int i = 0; i < vMaterial.size(); i++)
-	//{
-	//	FbxString lMaterialName = "material";
-	//	FbxDouble3 red(1.0, 0.0, 0.0);
-	//	FbxDouble3 black(0.0, 0.0, 0.0);
-	//	FbxDouble3 white(1.0, 1.0, 1.0);
-	//	FbxDouble3 blue(0.0, 0.0, 1.0);
-	//	FbxDouble3 green(0.0, 1.0, 0.0);
-	//	lMaterialName += i;
-
-	//	FbxSurfacePhong* lMaterial = FbxSurfacePhong::Create(pScene, lMaterialName.Buffer());
-
-
-	//	switch (i)
-	//	{
-	//	case 0:
-	//		lMaterial->Diffuse.Set(red);
-	//		break;
-	//	case 1:
-	//		lMaterial->Diffuse.Set(black);
-	//		break;
-	//	case 2:
-	//		lMaterial->Diffuse.Set(white);
-	//		break;
-	//	case 3:
-	//		lMaterial->Diffuse.Set(blue);
-	//		break;
-	//	default:
-	//		lMaterial->Diffuse.Set(green);
-	//		break;
-	//	}
-
-
-	//	//lMaterial->Diffuse.Set(dif);
-	//	//lMaterial->Ambient.Set(amb);
-	//	//lMaterial->Emissive.Set(emi);
-	//	//lMaterial->Specular.Set(spe);
-
-	//	FbxNode* lNode = lMesh->GetNode();
-	//	if (lNode)
-	//		lNode->AddMaterial(lMaterial);
-	//}
-
-
-
 	pScene->GetRootNode()->AddChild(lNode);
 
-
+	std::cout << ExportPath.data();
 	SaveScene(pManager, pScene, ExportPath.data());
+
 	return true;
 }
 
@@ -747,6 +303,145 @@ void CreateTexture(const FMeshInfoMap MeshInfoMap, FbxScene* pScene, FbxMesh* pM
 			lNode->AddMaterial(lMaterial);
 		}
 	}
+}
+
+void CreateCube()
+{
+
+
+
+	FbxManager* pManager = NULL;
+	FbxScene* pScene = NULL;
+	InitializeSdkObjects(pManager, pScene);
+	char* cc = NULL;
+	bool PResult = CreateScene(pScene, cc);
+	const char* pName = "test";
+	FbxMesh* lMesh = FbxMesh::Create(pScene, pName);
+
+	int PtCount = 0;
+
+	//FbxVector4 lNormalXPos(1, 0, 0);
+	//FbxVector4 lNormalXNeg(-1, 0, 0);
+	//FbxVector4 lNormalYPos(0, 1, 0);
+	//FbxVector4 lNormalYNeg(0, -1, 0);
+	//FbxVector4 lNormalZPos(0, 0, 1);
+	//FbxVector4 lNormalZNeg(0, 0, -1);
+
+	FbxVector4 lNormalXPos(1, 0, 0);
+	FbxVector4 lNormalXNeg(1, 0, 0);
+	FbxVector4 lNormalYPos(1, 0, 0);
+	FbxVector4 lNormalYNeg(1, 0, 0);
+	FbxVector4 lNormalZPos(0, 0, 1);
+	FbxVector4 lNormalZNeg(1, 0, 0);
+
+
+	FbxGeometryElementNormal* lGeometryElementNormal = lMesh->CreateElementNormal();
+	lGeometryElementNormal->SetMappingMode(FbxGeometryElement::eByControlPoint);
+
+	lGeometryElementNormal->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
+
+
+	lGeometryElementNormal->GetDirectArray().Add(lNormalZPos);
+	//lGeometryElementNormal->GetDirectArray().Add(lNormalXPos);
+	//lGeometryElementNormal->GetDirectArray().Add(lNormalZNeg);
+	//lGeometryElementNormal->GetDirectArray().Add(lNormalXNeg);
+	//lGeometryElementNormal->GetDirectArray().Add(lNormalYPos);
+	//lGeometryElementNormal->GetDirectArray().Add(lNormalYNeg);
+
+	//lGeometryElementNormal->GetIndexArray().Add(0); // index of lNormalZPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(0); // index of lNormalZPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(0); // index of lNormalZPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(0); // index of lNormalZPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(1); // index of lNormalXPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(1); // index of lNormalXPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(1); // index of lNormalXPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(1); // index of lNormalXPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(2); // index of lNormalZNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(2); // index of lNormalZNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(2); // index of lNormalZNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(2); // index of lNormalZNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(3); // index of lNormalXNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(3); // index of lNormalXNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(3); // index of lNormalXNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(3); // index of lNormalXNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(4); // index of lNormalYPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(4); // index of lNormalYPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(4); // index of lNormalYPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(4); // index of lNormalYPos in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(5); // index of lNormalYNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(5); // index of lNormalYNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(5); // index of lNormalYNeg in the direct array.
+	//lGeometryElementNormal->GetIndexArray().Add(5); // index of lNormalYNeg in the direct array.
+
+
+	FbxVector4 lControlPoint0(-50, 0, 50);
+	FbxVector4 lControlPoint1(50, 0, 50);
+	FbxVector4 lControlPoint2(50, 100, 50);
+	FbxVector4 lControlPoint3(-50, 100, 50);
+	FbxVector4 lControlPoint4(-50, 0, -50);
+	FbxVector4 lControlPoint5(50, 0, -50);
+	FbxVector4 lControlPoint6(50, 100, -50);
+	FbxVector4 lControlPoint7(-50, 100, -50);
+
+	lMesh->InitControlPoints(24);
+	FbxVector4* lControlPoints = lMesh->GetControlPoints();
+	lControlPoints[0] = lControlPoint0;
+	lControlPoints[1] = lControlPoint1;
+	lControlPoints[2] = lControlPoint2;
+	lControlPoints[3] = lControlPoint3;
+	lControlPoints[4] = lControlPoint1;
+	lControlPoints[5] = lControlPoint5;
+	lControlPoints[6] = lControlPoint6;
+	lControlPoints[7] = lControlPoint2;
+	lControlPoints[8] = lControlPoint5;
+	lControlPoints[9] = lControlPoint4;
+	lControlPoints[10] = lControlPoint7;
+	lControlPoints[11] = lControlPoint6;
+	lControlPoints[12] = lControlPoint4;
+	lControlPoints[13] = lControlPoint0;
+	lControlPoints[14] = lControlPoint3;
+	lControlPoints[15] = lControlPoint7;
+	lControlPoints[16] = lControlPoint3;
+	lControlPoints[17] = lControlPoint2;
+	lControlPoints[18] = lControlPoint6;
+	lControlPoints[19] = lControlPoint7;
+	lControlPoints[20] = lControlPoint1;
+	lControlPoints[21] = lControlPoint0;
+	lControlPoints[22] = lControlPoint4;
+	lControlPoints[23] = lControlPoint5;
+
+	int lPolygonVertices[] = { 0, 1, 2, 3,
+		4, 5, 6, 7,
+		8, 9, 10, 11,
+		12, 13, 14, 15,
+		16, 17, 18, 19,
+		20, 21, 22, 23 };
+
+
+
+	//每3个点一个面，a代表了除以几，是一个面
+	int a = 3;
+	for (int aa = 0; aa < 6; aa++)
+	{
+		lMesh->BeginPolygon(-1, -1, -1, false);
+		for (int bb = 0; bb < 4; bb++)
+		{
+			lGeometryElementNormal->GetIndexArray().Add(0);
+			lMesh->AddPolygon(lPolygonVertices[aa * 4 + bb]);
+
+		}
+		lMesh->EndPolygon();
+	}
+
+	FbxNode* lNode = FbxNode::Create(pScene, pName);
+	lNode->SetNodeAttribute(lMesh);
+	pScene->GetRootNode()->AddChild(lNode);
+	SaveScene(pManager, pScene, "textcube.fbx");
+
+	DestroySdkObjects(pManager, PResult);
+
+
+
 }
 
 
