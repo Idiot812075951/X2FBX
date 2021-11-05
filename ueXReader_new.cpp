@@ -204,58 +204,49 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 	const char* pName = "test";
 	FbxMesh* lMesh = FbxMesh::Create(pScene, pName);
 
+
+
+
 	lMesh->InitControlPoints(VerAry.size());
 	FbxVector4* lControlPoints = lMesh->GetControlPoints();
+
+
+
+
+
 	for (int i = 0; i < VerAry.size(); i++)
 	{
 		lControlPoints[i].mData[0] = VerAry[i].position.Z / 10;
 		lControlPoints[i].mData[1] = VerAry[i].position.Y / 10;
 		lControlPoints[i].mData[2] = VerAry[i].position.X / 10;
-		//		FbxVector4 aa(0, 0, 1);
-		//		FbxVector4 aa(VerAry[i].normal.X, VerAry[i].normal.Y, VerAry[i].normal.Z);
-		//		lGeometryElementNormal->GetDirectArray().Add(aa);
+
 	}
 
 	FbxGeometryElementNormal* lGeometryElementNormal = lMesh->CreateElementNormal();
 	lGeometryElementNormal->SetMappingMode(FbxGeometryElement::eByControlPoint);
-	lGeometryElementNormal->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
-	//lGeometryElementNormal->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
-	//lGeometryElementNormal->GetDirectArray().Add(FbxVector4(1,0,0));
+	lGeometryElementNormal->SetReferenceMode(FbxGeometryElement::eDirect);
 
-	FbxVector4 aa(0, 0, 1);
-	//	FbxVector4 aa(VerAry[i].normal.X, VerAry[i].normal.Y, VerAry[i].normal.Z);
-	lGeometryElementNormal->GetDirectArray().Add(aa);
-	// 	for (auto Iter : SubsetIndexMap)
-	// 	{
-	// 		for (int i = 0; i < Iter.second.second.size() / 3; i++)
-	// 		{
-	// 			for (int j = 0; j < 3; j++)
-	// 			{
-	// 				auto Index = Iter.second.second[i * 3 + j];
-	// 
-	// 				FbxVector4 aa(VerAry[Index].normal.X, VerAry[Index].normal.Y, VerAry[Index].normal.Z);
-	// 
-	// 				lGeometryElementNormal->GetDirectArray().Add(aa);
-	// 			}
-	// 		}
-	// 	}
 
-	// 	for (auto Iter : SubsetIndexMap)
-	// 	{
-	// 		for (int i = 0; i < Iter.second.second.size() / 3; i++)
-	// 		{
-	// 			for (int j = 0; j < 1; j++)
-	// 			{
-	// 				auto Index = Iter.second.second[i * 3 + j];
-	// 				FbxVector4 aa(0, 0, 1);
-	// 				lGeometryElementNormal->GetDirectArray().Add(aa);
-	// 			}
-	// 		}
-	// 	}
 
-	// 	FbxGeometryElementMaterial* lMaterialElement = lMesh->CreateElementMaterial();
-	// 	lMaterialElement->SetMappingMode(FbxGeometryElement::eByPolygon);
-	// 	lMaterialElement->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
+	for (int i = 0; i < VerAry.size(); i++)
+	{
+		//FbxVector4 aa(0, 0, 1);
+		//FbxVector4 aa(VerAry[i].normal.Z, VerAry[i].normal.Y, VerAry[i].normal.X);
+
+		//FbxVector4 aa(-VerAry[i].normal.Z / 10, -VerAry[i].normal.Y / 10, -VerAry[i].normal.X / 10);
+		//FbxVector4 aa(VerAry[i].normal.Z / 10, VerAry[i].normal.Y / 10, VerAry[i].normal.X / 10);
+		FbxVector4 aa(VerAry[i].normal.Z / 10, VerAry[i].normal.Y / 10, VerAry[i].normal.X / 10);
+
+		lGeometryElementNormal->GetDirectArray().Add(aa);
+		
+
+	}
+
+
+
+	FbxGeometryElementMaterial* lMaterialElement = lMesh->CreateElementMaterial();
+	lMaterialElement->SetMappingMode(FbxGeometryElement::eByPolygon);
+	lMaterialElement->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
 
 	for (auto Iter : SubsetIndexMap)
 	{
@@ -266,16 +257,25 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 			{
 				auto Index = Iter.second.second[i * 3 + j];
 				lMesh->AddPolygon(Index);
-				lGeometryElementNormal->GetIndexArray().Add(0);
+				//lGeometryElementNormal->GetIndexArray().Add(0);
+
+			
+
 			}
 			lMesh->EndPolygon();
 		}
 	}
 
+
+
+
+	//auto LaterPtr = lMesh->GetLayer(0);
+	//LaterPtr->SetNormals(lGeometryElementNormal);
+
+
+
 	FbxNode* lNode = FbxNode::Create(pScene, pName);
 	lNode->SetNodeAttribute(lMesh);
-	auto LaterPtr = lMesh->GetLayer(0);
-	LaterPtr->SetNormals(lGeometryElementNormal);
 
 #pragma region Material
 	int c = 0;
@@ -308,8 +308,7 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 
 
 
-
-
+	
 	pScene->GetRootNode()->AddChild(lNode);
 
 	SaveScene(pManager, pScene, ExportPath.data());

@@ -216,9 +216,13 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 
 	for (int i = 0; i < VerAry.size(); i++)
 	{
-		lControlPoints[i].mData[0] = VerAry[i].position.Z / 10;
-		lControlPoints[i].mData[1] = VerAry[i].position.Y / 10;
-		lControlPoints[i].mData[2] = VerAry[i].position.X / 10;
+		//lControlPoints[i].mData[0] = VerAry[i].position.Z / 10;
+		//lControlPoints[i].mData[1] = VerAry[i].position.Y / 10;
+		//lControlPoints[i].mData[2] = VerAry[i].position.X / 10;
+
+		lControlPoints[i].mData[0] = VerAry[i].position.Z;
+		lControlPoints[i].mData[1] = VerAry[i].position.Y;
+		lControlPoints[i].mData[2] = VerAry[i].position.X;
 
 	}
 
@@ -233,8 +237,16 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 		//FbxVector4 aa(0, 0, 1);
 		//FbxVector4 aa(VerAry[i].normal.Z, VerAry[i].normal.Y, VerAry[i].normal.X);
 
-		FbxVector4 aa(-VerAry[i].normal.Z / 10, -VerAry[i].normal.Y / 10, -VerAry[i].normal.X / 10);
-
+		//FbxVector4 aa(-VerAry[i].normal.Z / 10, -VerAry[i].normal.Y / 10, -VerAry[i].normal.X / 10);
+		//FbxVector4 aa(VerAry[i].normal.Z / 10, VerAry[i].normal.Y / 10, VerAry[i].normal.X / 10);
+		//if (i%1==0)
+		//{
+		//	FbxVector4 aa(-VerAry[i].normal.X, -VerAry[i].normal.Y, -VerAry[i].normal.Z);
+		//	lGeometryElementNormal->GetDirectArray().Add(aa);
+		//}
+		//FbxVector4 aa(VerAry[i].normal.X, VerAry[i].normal.Y, VerAry[i].normal.Z);
+		FbxVector4 aa(-VerAry[i].normal.Z, -VerAry[i].normal.Y, -VerAry[i].normal.X);
+		//FbxVector4 aa(1,0,1);
 		lGeometryElementNormal->GetDirectArray().Add(aa);
 		
 
@@ -253,22 +265,38 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 			lMesh->BeginPolygon(Iter.first);
 			for (int j = 0; j < 3; j++)
 			{
-				auto Index = Iter.second.second[i * 3 + j];
-				lMesh->AddPolygon(Index);
+				//auto Index = Iter.second.second[i * 3 + j];
+				//lMesh->AddPolygon(Index);
+
+				if (j==0)
+				{
+					auto Index = Iter.second.second[i * 3 + 0];
+					lMesh->AddPolygon(Index);
+				}
+
+
+				if (j==1)
+				{
+					auto Index = Iter.second.second[i * 3 + 2];
+					lMesh->AddPolygon(Index);
+				}
+
+				if (j== 2)
+				{
+					auto Index = Iter.second.second[i * 3 + 1];
+					lMesh->AddPolygon(Index);
+				}
+
 				//lGeometryElementNormal->GetIndexArray().Add(0);
 
-			
+
+				/*FbxVector4 aa(VerAry[Index].normal.X*10, VerAry[Index].normal.Y*10,VerAry[Index].normal.Z*10);
+				lGeometryElementNormal->GetDirectArray().Add(aa);*/
 
 			}
 			lMesh->EndPolygon();
 		}
 	}
-
-
-
-
-	//auto LaterPtr = lMesh->GetLayer(0);
-	//LaterPtr->SetNormals(lGeometryElementNormal);
 
 
 
@@ -281,9 +309,9 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 	{
 		FbxString lMaterialName = "material";
 		FbxDouble3 dif(i.diffuse.r, i.diffuse.g, i.diffuse.b);
-		FbxDouble3 amb(i.ambient.r, i.ambient.g, i.ambient.b);
-		FbxDouble3 emi(i.emissive.r, i.emissive.g, i.emissive.b);
-		FbxDouble3 spe(i.specular.r, i.specular.g, i.specular.b);
+		//FbxDouble3 amb(i.ambient.r, i.ambient.g, i.ambient.b);
+		//FbxDouble3 emi(i.emissive.r, i.emissive.g, i.emissive.b);
+		//FbxDouble3 spe(i.specular.r, i.specular.g, i.specular.b);
 		lMaterialName += c;
 		c += 1;
 
@@ -293,9 +321,9 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 
 		/*lMaterial->Diffuse.Set(dif);*/
 		lMaterial->Diffuse.Set(dif);
-		lMaterial->Ambient.Set(amb);
-		lMaterial->Emissive.Set(emi);
-		lMaterial->Specular.Set(spe);
+		//lMaterial->Ambient.Set(amb);
+		//lMaterial->Emissive.Set(emi);
+		//lMaterial->Specular.Set(spe);
 
 		FbxNode* lNode = lMesh->GetNode();
 		if (lNode)
