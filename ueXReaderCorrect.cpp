@@ -22,9 +22,7 @@ FbxManager* gSdkManager = NULL;
 
 
 static const char* gDiffuseElementName = "DiffuseUV";
-
 static const char* gAmbientElementName = "AmbientUV";
-
 static const char* gEmissiveElementName = "EmissiveUV";
 
 char* CutPostfix(char* Target)
@@ -205,22 +203,21 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 	FbxMesh* lMesh = FbxMesh::Create(pScene, pName);
 
 
+	FbxNode* lNode = FbxNode::Create(pScene, pName);
+	lNode->SetNodeAttribute(lMesh);
+
+	FbxGeometryElementMaterial* lMaterialElement = lMesh->CreateElementMaterial();
+	lMaterialElement->SetMappingMode(FbxGeometryElement::eByPolygon);
+	lMaterialElement->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
+	//lMaterialElement->SetReferenceMode(FbxGeometryElement::eDirect);
 
 
+
+
+
+#pragma region ControlPoints
 	lMesh->InitControlPoints(VerAry.size());
 	FbxVector4* lControlPoints = lMesh->GetControlPoints();
-
-
-
-
-
-	for (int i = 0; i < VerAry.size(); i++)
-	{
-		lControlPoints[i].mData[0] = VerAry[i].position.Z / 10;
-		lControlPoints[i].mData[1] = VerAry[i].position.Y / 10;
-		lControlPoints[i].mData[2] = VerAry[i].position.X / 10;
-
-	}
 
 	FbxGeometryElementNormal* lGeometryElementNormal = lMesh->CreateElementNormal();
 	lGeometryElementNormal->SetMappingMode(FbxGeometryElement::eByControlPoint);
@@ -228,87 +225,93 @@ bool getXInfo(const std::string& lxoFilename, HWND hwnd, std::string ExportPath)
 
 
 
+	FbxGeometryElementUV* lUVDiffuseElement = lMesh->CreateElementUV(gDiffuseElementName);
+	lUVDiffuseElement->SetMappingMode(FbxGeometryElement::eByControlPoint);
+	lUVDiffuseElement->SetReferenceMode(FbxGeometryElement::eDirect);
+
+	// Create UV for Ambient channel
+	FbxGeometryElementUV* lUVAmbientElement = lMesh->CreateElementUV(gAmbientElementName);
+	lUVAmbientElement->SetMappingMode(FbxGeometryElement::eByControlPoint);
+	lUVAmbientElement->SetReferenceMode(FbxGeometryElement::eDirect);
+
+	// Create UV for Emissive channel
+	FbxGeometryElementUV* lUVEmissiveElement = lMesh->CreateElementUV(gEmissiveElementName);
+	lUVEmissiveElement->SetMappingMode(FbxGeometryElement::eByControlPoint);
+	lUVEmissiveElement->SetReferenceMode(FbxGeometryElement::eDirect);
+
+
+
 	for (int i = 0; i < VerAry.size(); i++)
 	{
-		//FbxVector4 aa(0, 0, 1);
-		//FbxVector4 aa(VerAry[i].normal.Z, VerAry[i].normal.Y, VerAry[i].normal.X);
+		lControlPoints[i].mData[0] = VerAry[i].position.Z;
+		lControlPoints[i].mData[1] = VerAry[i].position.Y;
+		lControlPoints[i].mData[2] = VerAry[i].position.X;
 
-		//FbxVector4 aa(-VerAry[i].normal.Z / 10, -VerAry[i].normal.Y / 10, -VerAry[i].normal.X / 10);
-		//FbxVector4 aa(VerAry[i].normal.Z / 10, VerAry[i].normal.Y / 10, VerAry[i].normal.X / 10);
-		FbxVector4 aa(VerAry[i].normal.Z / 10, VerAry[i].normal.Y / 10, VerAry[i].normal.X / 10);
+		FbxVector4 Normal(VerAry[i].normal.Z, VerAry[i].normal.Y, VerAry[i].normal.X);
+		lGeometryElementNormal->GetDirectArray().Add(Normal);
 
-		lGeometryElementNormal->GetDirectArray().Add(aa);
-		
-
+		FbxVector2 UV(VerAry[i].uv.X, VerAry[i].uv.Y);
+		lUVEmissiveElement->GetDirectArray().Add(UV);
+		lUVDiffuseElement->GetDirectArray().Add(UV);
+		lUVAmbientElement->GetDirectArray().Add(UV);
 	}
 
 
 
-	FbxGeometryElementMaterial* lMaterialElement = lMesh->CreateElementMaterial();
-	lMaterialElement->SetMappingMode(FbxGeometryElement::eByPolygon);
-	lMaterialElement->SetReferenceMode(FbxGeometryElement::eIndexToDirect);
+#pragma endregion
 
-	for (auto Iter : SubsetIndexMap)
+	for (auto Iter : SubsetIndexMap)//2196  / 3 =732
 	{
 		for (int i = 0; i < Iter.second.second.size() / 3; i++)
 		{
 			lMesh->BeginPolygon(Iter.first);
+			//注意，这里因为是从.X到FBX，坐标系不一样，所以三角索引是0、2、1
 			for (int j = 0; j < 3; j++)
 			{
-				auto Index = Iter.second.second[i * 3 + j];
-				lMesh->AddPolygon(Index);
-				//lGeometryElementNormal->GetIndexArray().Add(0);
-
-			
-
+				int Index = i * 3 + (2 - j);
+				auto IndexPoint = Iter.second.second[Index];
+				lMesh->AddPolygon(IndexPoint);
 			}
 			lMesh->EndPolygon();
 		}
 	}
+#pragma endregion
 
 
 
 
-	//auto LaterPtr = lMesh->GetLayer(0);
-	//LaterPtr->SetNormals(lGeometryElementNormal);
 
-
-
-	FbxNode* lNode = FbxNode::Create(pScene, pName);
-	lNode->SetNodeAttribute(lMesh);
 
 #pragma region Material
-	int c = 0;
-	for (auto i : vMaterial)
+	int nameindex = 0;
+	for (const auto& i : vMaterial)
 	{
 		FbxString lMaterialName = "material";
 		FbxDouble3 dif(i.diffuse.r, i.diffuse.g, i.diffuse.b);
 		FbxDouble3 amb(i.ambient.r, i.ambient.g, i.ambient.b);
 		FbxDouble3 emi(i.emissive.r, i.emissive.g, i.emissive.b);
 		FbxDouble3 spe(i.specular.r, i.specular.g, i.specular.b);
-		lMaterialName += c;
-		c += 1;
-
-		FbxDouble3 red(1.0, 0.0, 0.0);
+		lMaterialName += nameindex;
 
 		auto lMaterial = FbxSurfacePhong::Create(pScene, lMaterialName.Buffer());
 
-		/*lMaterial->Diffuse.Set(dif);*/
 		lMaterial->Diffuse.Set(dif);
-		lMaterial->Ambient.Set(amb);
-		lMaterial->Emissive.Set(emi);
-		lMaterial->Specular.Set(spe);
+		/*	lMaterial->Ambient.Set(amb);
+			lMaterial->Emissive.Set(emi);
+			lMaterial->Specular.Set(spe);*/
 
 		FbxNode* lNode = lMesh->GetNode();
 		if (lNode)
 			lNode->AddMaterial(lMaterial);
+		nameindex += 1;
+
 	}
-
-#pragma endregion
-
+#pragma endregion Material
 
 
-	
+
+
+
 	pScene->GetRootNode()->AddChild(lNode);
 
 	SaveScene(pManager, pScene, ExportPath.data());

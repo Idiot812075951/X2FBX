@@ -162,14 +162,22 @@ int main(int argc, char* argv[])
 		string OutFbx = argv[2];
 		
 		//string OutTmp = "D:\\FbxTmp\\TemporaryReameFBX.fbx";
-		string OutTmp = TmpFolder+"\\TemporaryFile.fbx";
+		string OutTmp = TmpFolder+"\\TemporaryFile.FBX";
 
 		HWND curhund = GetConsoleHwnd();
 		string s;
 		string x = ".X";
+		string littlex = ".x";
 		//要一个fbx作为string的复制，因为在replace的时候会改变输入值
 		string fbx = InputXfile;
+		string::size_type idx = InputXfile.find(x);
+		if (idx==string::npos)
+		{
+			InputXfile.replace(InputXfile.find(littlex), littlex.length(), x);
+		}
+
 		s = InputXfile.replace(InputXfile.find(x), x.length(), ".FBX");
+
 
 		getXInfo(fbx, curhund, OutTmp);
 
@@ -188,6 +196,7 @@ int main(int argc, char* argv[])
 	}
 
 }
+
 
 
 char* WcharToChar(wchar_t* wc)
